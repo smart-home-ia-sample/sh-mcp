@@ -1,5 +1,4 @@
 import os
-from contextlib import asynccontextmanager
 from typing import Any
 
 from starlette.requests import Request
@@ -8,44 +7,18 @@ from starlette.responses import JSONResponse
 from app import prompts as prompt_defs
 from app import resources as resource_defs
 from app import tools as tool_defs
-from app.registration import TOOLS, register_with_bfa
-from smart_home_common import get_logger, run_registration_heartbeat
+from app.tools_catalog import TOOLS
 
 try:
     from mcp.server.fastmcp import FastMCP as MCPServerClass
 except ModuleNotFoundError:
     from mcp.server.mcpserver import MCPServer as MCPServerClass
 
-logger = get_logger(__name__)
-
-BFA_URL = os.environ["BFA_URL"]
 MCP_PORT = int(os.environ.get("MCP_PORT", "8100"))
 MCP_PATH = os.environ.get("MCP_PATH", "/mcp")
-MCP_USE_SSL = os.environ.get("MCP_USE_SSL", "false").lower() == "true"
-REGISTRATION_HEARTBEAT_SECONDS = float(os.environ.get("REGISTRATION_HEARTBEAT_SECONDS", "15"))
 
-
-def _register(max_attempts: int = 10) -> dict:
-    return register_with_bfa(BFA_URL, port=MCP_PORT, path=MCP_PATH, use_ssl=MCP_USE_SSL, max_attempts=max_attempts)
-
-
-@asynccontextmanager
-async def _lifespan(server):
-    import asyncio
-
-    _register()
-    logger.info("registered with BFA")
-
-    heartbeat_task = asyncio.create_task(
-        run_registration_heartbeat(lambda: _register(max_attempts=1), interval_seconds=REGISTRATION_HEARTBEAT_SECONDS)
-    )
-    try:
-        yield
-    finally:
-        heartbeat_task.cancel()
-
-
-mcp = MCPServerClass(name="home-mcp", version="0.1.0", lifespan=_lifespan)
+# No self-registration: the BFA pulls `GET /tools` into its catalog (spec/13).
+mcp = MCPServerClass(name="home-mcp", version="0.1.0")
 
 
 # ---- tools: one generic verb per semantic action, thin over the BFF ---------

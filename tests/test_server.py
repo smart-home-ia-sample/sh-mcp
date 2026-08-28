@@ -52,7 +52,7 @@ def test_list_tools_route_merges_the_catalog_docs():
 
     assert {t["name"] for t in payload} == VERBS
     turn_on = next(t for t in payload if t["name"] == "turn_on")
-    assert turn_on["annotations"]["examples"]  # pulled from registration.TOOLS
+    assert turn_on["annotations"]["examples"]  # pulled from tools_catalog.TOOLS
     assert isinstance(turn_on["input_schema"], dict)
 
 
@@ -63,19 +63,9 @@ def test_resource_helpers_are_wired(monkeypatch):
     assert server.home_security() == {"alarmArmed": False}
 
 
-def test_lifespan_registers_then_cancels_the_heartbeat(monkeypatch):
-    calls = {"register": 0}
-    monkeypatch.setattr(server, "register_with_bfa", lambda *a, **k: calls.__setitem__("register", calls["register"] + 1) or {"ok": True})
+def test_tools_route_is_backed_by_the_static_catalog():
+    # /tools is what the BFA pulls into its catalog — it must expose the same
+    # verbs the tool wrappers register.
+    from app.tools_catalog import TOOLS
 
-    async def fake_heartbeat(fn, interval_seconds):
-        while True:
-            await asyncio.sleep(3600)
-
-    monkeypatch.setattr(server, "run_registration_heartbeat", fake_heartbeat)
-
-    async def exercise():
-        async with server._lifespan(server.mcp):
-            pass
-
-    asyncio.run(exercise())
-    assert calls["register"] == 1
+    assert {t["id"] for t in TOOLS} == VERBS

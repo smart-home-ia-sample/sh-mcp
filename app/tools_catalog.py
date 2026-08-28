@@ -1,10 +1,7 @@
-import httpx
-
-from smart_home_common.registration_client import ServiceInfo, register_with_retry
-
 # One entry per generic verb tool (not per device type). Documented with tags and
 # Portuguese example phrasings spanning every device type the verb applies to, so
-# the BFA can rank it in /resolve. Also the source of GET /tools.
+# the BFA can rank it in /resolve. This list is the source of `GET /tools`, which
+# the BFA pulls into its catalog (spec/13) — no self-registration.
 TOOLS: list[dict] = [
     {
         "id": "turn_on",
@@ -83,22 +80,3 @@ TOOLS: list[dict] = [
         "examples": ["desarma o alarme", "desativa a segurança"],
     },
 ]
-
-TOOL_NAMES = [tool["id"] for tool in TOOLS]
-
-
-def register_with_bfa(
-    bfa_url: str, port: int, path: str, use_ssl: bool = False, version: str = "0.1.0", max_attempts: int = 10
-) -> dict:
-    service = ServiceInfo(
-        name="home-mcp",
-        port=port,
-        path=path,
-        use_ssl=use_ssl,
-        capabilities=TOOL_NAMES,
-        protocol="mcp",
-        version=version,
-        catalog=TOOLS,
-    )
-    with httpx.Client(timeout=5.0) as client:
-        return register_with_retry(client, bfa_url, service, kind="mcp", max_attempts=max_attempts)
