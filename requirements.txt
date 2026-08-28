@@ -1,0 +1,4 @@
+mcp==2.1.1
+httpx
+uvicorn[standard]
+starlette==0.38.6
