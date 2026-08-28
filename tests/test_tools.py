@@ -146,6 +146,10 @@ _SNAPSHOT = {
         ]},
         {"slug": "bedroom", "name": "Quarto", "devices": [
             {"deviceId": "u3", "slug": "bedroom_ac", "nickname": "AC", "type": "ac",
+             "capabilities": {"traits": [
+                 {"trait": "on_off", "commands": ["turn_on", "turn_off"], "state": ["on"]},
+                 {"trait": "thermostat", "commands": ["set_temperature"], "state": ["temperature"],
+                  "params": {"set_temperature": {"type": "number", "min": 17, "max": 28}}}]},
              "state": {"on": True, "temperature": 21}},
         ]},
         {"slug": "entrance", "name": "Entrada", "devices": [
@@ -180,6 +184,13 @@ def test_devices_resource_carries_the_allowed_actions():
     assert by_id["living_room_light"]["actions"] == ["turn_on", "turn_off"]
     # a read-only device (occupancy trait, no commands) exposes no actions key
     assert "actions" not in by_id["motion_sensor"]
+
+
+def test_devices_resource_carries_declared_numeric_bounds():
+    by_id = {d["id"]: d for d in resources.devices()}
+    assert by_id["bedroom_ac"]["params"] == {"set_temperature": {"min": 17, "max": 28}}
+    # a device whose descriptor declares no numeric params has no params key
+    assert "params" not in by_id["living_room_light"]
 
 
 def test_security_resource_shape():
