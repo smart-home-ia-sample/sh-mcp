@@ -26,6 +26,20 @@ def _actions_of(device: dict) -> list[str]:
     return [cmd for trait in caps.get("traits", []) for cmd in (trait.get("commands") or [])]
 
 
+def _params_of(device: dict) -> dict:
+    """Numeric bounds the announced descriptor declares per verb, e.g.
+    {"set_temperature": {"min": 16, "max": 30}} — so the orchestrator can render
+    the real range in its prompt instead of hardcoding one."""
+    caps = device.get("capabilities") or {}
+    out: dict[str, dict] = {}
+    for trait in caps.get("traits", []):
+        for verb, spec in (trait.get("params") or {}).items():
+            bounds = {k: spec[k] for k in ("min", "max") if k in (spec or {})}
+            if bounds:
+                out[verb] = bounds
+    return out
+
+
 def devices() -> list[dict]:
     snap = bff_client.snapshot()
     out = []
@@ -39,6 +53,9 @@ def devices() -> list[dict]:
             actions = _actions_of(d)
             if actions:
                 entry["actions"] = actions
+            params = _params_of(d)
+            if params:
+                entry["params"] = params
             out.append(entry)
     return out
 
